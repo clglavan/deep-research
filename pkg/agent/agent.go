@@ -981,10 +981,17 @@ Knowledge gathered:
 
 		fmt.Printf("🔎 Processing queries %d-%d of %d\n", queryIndex-len(roundQueries)+1, queryIndex, totalQueries)
 
-		// Process queries with pagination
-		roundResults, newURLs, duplicates, searchErrors := a.searchWithPagination(roundQueries)
+		// Process queries with pagination (supports mid-search cancellation)
+		roundResults, newURLs, duplicates, searchErrors, searchCancelled := a.searchWithPagination(ctx, roundQueries)
 		totalURLsFound += newURLs
 		totalDuplicates += duplicates
+
+		// Check if cancelled during search
+		if searchCancelled {
+			fmt.Printf("\n⚠️ Search cancelled mid-round, proceeding to report generation...\n")
+			cancelled = true
+			goto writeReport
+		}
 
 		// Emit progress with any search errors
 		if len(searchErrors) > 0 {
@@ -1105,11 +1112,13 @@ writeReport:
 }
 
 // searchWithPagination searches queries across multiple pages with rate limiting
-func (a *DeepResearcher) searchWithPagination(queries []string) (string, int, int, []string) {
+// Returns early with partial results if context is cancelled
+func (a *DeepResearcher) searchWithPagination(ctx context.Context, queries []string) (string, int, int, []string, bool) {
 	var results strings.Builder
 	newURLs := 0
 	duplicates := 0
 	var searchErrors []string
+	cancelled := false
 
 	// Check if searcher supports pagination
 	type paginatedSearcher interface {
@@ -1121,7 +1130,15 @@ func (a *DeepResearcher) searchWithPagination(queries []string) (string, int, in
 	fetcher, canFetch := a.searcher.(search.ContentFetcher)
 	useDeepMode := a.config.DeepMode && canFetch
 
+queryLoop:
 	for _, query := range queries {
+		// Check for cancellation before each query
+		select {
+		case <-ctx.Done():
+			cancelled = true
+			break queryLoop
+		default:
+		}
 		// Determine max pages: 0 means auto (keep going until empty), otherwise use configured value
 		maxPages := a.config.MaxPages
 		if maxPages == 0 {
@@ -1129,6 +1146,14 @@ func (a *DeepResearcher) searchWithPagination(queries []string) (string, int, in
 		}
 		
 		for page := 1; page <= maxPages; page++ {
+			// Check for cancellation before each page
+			select {
+			case <-ctx.Done():
+				cancelled = true
+				break queryLoop
+			default:
+			}
+
 			// Rate limiting delay
 			if a.config.DelayMs > 0 {
 				time.Sleep(time.Duration(a.config.DelayMs) * time.Millisecond)
@@ -1203,7 +1228,7 @@ func (a *DeepResearcher) searchWithPagination(queries []string) (string, int, in
 		}
 	}
 
-	return results.String(), newURLs, duplicates, searchErrors
+	return results.String(), newURLs, duplicates, searchErrors, cancelled
 }
 
 // truncateQuery truncates a query for display

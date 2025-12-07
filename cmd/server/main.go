@@ -121,6 +121,7 @@ func main() {
 	http.HandleFunc("/api/approve", server.handleApprove)
 	http.HandleFunc("/api/revise", server.handleRevise)
 	http.HandleFunc("/api/cancel", server.handleCancel)
+	http.HandleFunc("/api/reset", server.handleReset)
 	http.HandleFunc("/api/status", server.handleStatus)
 	http.HandleFunc("/api/progress", server.handleProgress)
 	http.HandleFunc("/api/results", server.handleResults)
@@ -454,6 +455,35 @@ func (s *Server) handleCancel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, "Nothing to cancel", http.StatusBadRequest)
+}
+
+// handleReset clears the current job state (useful after errors)
+func (s *Server) handleReset(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.mu.RLock()
+	status := s.currentJob.Status
+	s.mu.RUnlock()
+
+	// Only allow reset from error, complete, or idle states
+	if status == "running" || status == "planning" {
+		http.Error(w, "Cannot reset while research is in progress", http.StatusConflict)
+		return
+	}
+
+	s.mu.Lock()
+	s.currentJob = &ResearchJob{Status: "idle"}
+	s.researcher = nil
+	s.cancelFunc = nil
+	s.mu.Unlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "idle",
+	})
 }
 
 // executeResearch runs the research with cancellation support

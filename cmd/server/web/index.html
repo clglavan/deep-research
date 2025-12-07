@@ -869,15 +869,26 @@
         }
         
         // Dismiss error but keep loading (for transient errors)
-        function dismissLoadingError() {
+        async function dismissLoadingError() {
             document.getElementById('loadingError').style.display = 'none';
             document.getElementById('loadingActions').style.display = 'none';
+            // Reset server state when dismissing error
+            try {
+                await fetch('/api/reset', { method: 'POST' });
+            } catch (err) {
+                // Ignore errors
+            }
         }
         
         // Cancel research and return to form
         async function cancelAndReturn() {
             try {
                 await fetch('/api/cancel', { method: 'POST' });
+            } catch (err) {
+                // Ignore errors
+            }
+            try {
+                await fetch('/api/reset', { method: 'POST' });
             } catch (err) {
                 // Ignore errors
             }
@@ -894,6 +905,13 @@
             document.getElementById('errorLog').classList.remove('active');
             document.getElementById('errorCount').textContent = '0';
             document.getElementById('errorLogContent').innerHTML = '';
+            
+            // Reset server state before starting new research
+            try {
+                await fetch('/api/reset', { method: 'POST' });
+            } catch (err) {
+                // Ignore - will fail if already idle
+            }
             
             const data = {
                 topic: document.getElementById('topic').value,
@@ -1481,11 +1499,18 @@
                         break;
                         
                     case 'error':
-                        // Show error but also show the input form so user can start fresh
+                        // On page load with error state, reset and show fresh form
+                        // This prevents stale errors from showing on refresh
                         if (job.config) restoreFormValues(job.config);
-                        // Keep input section visible, just show error section
+                        // Reset server state
+                        try {
+                            await fetch('/api/reset', { method: 'POST' });
+                        } catch (err) {
+                            // Ignore
+                        }
+                        // Show the error briefly so user knows what happened, then allow fresh start
                         document.getElementById('errorSection').style.display = 'block';
-                        document.getElementById('errorMessage').textContent = job.error || 'An unknown error occurred';
+                        document.getElementById('errorMessage').textContent = (job.error || 'An unknown error occurred') + ' (Previous session - you can start a new research)';
                         break;
                 }
             } catch (err) {
