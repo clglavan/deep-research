@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"deep-research/pkg/llm"
 	"deep-research/pkg/search"
 	"encoding/json"
@@ -21,6 +22,19 @@ func stripThinkTags(s string) string {
 	return strings.TrimSpace(s)
 }
 
+// ProgressEvent represents a progress update during research
+type ProgressEvent struct {
+	Phase       string   `json:"phase"`       // "planning", "searching", "compressing", "writing_report"
+	Round       int      `json:"round"`       // Current round number
+	TotalRounds int      `json:"totalRounds"` // Total rounds configured
+	URLsFound   int      `json:"urlsFound"`   // Unique URLs found so far
+	TargetURLs  int      `json:"targetURLs"`  // Target URLs (min-results)
+	Message     string   `json:"message"`     // Human-readable status message
+	Percent     int      `json:"percent"`     // Estimated progress percentage
+	Errors      []string `json:"errors"`      // Search errors encountered this round
+	ErrorCount  int      `json:"errorCount"`  // Total error count
+}
+
 // Config holds the agent configuration
 type Config struct {
 	MaxLoops      int
@@ -32,6 +46,7 @@ type Config struct {
 	DelayMs       int  // Milliseconds delay between HTTP requests (rate limiting)
 	MaxPages      int  // Number of SearXNG result pages to fetch per query (0 = auto)
 	ContextLength int  // LLM context length in tokens (for compression management)
+	OnProgress    func(ProgressEvent) // Callback for progress updates (optional, for UI)
 }
 
 // maxContextChars returns the estimated max characters based on context length
@@ -82,6 +97,13 @@ func NewDeepResearcher(l *llm.Client, s search.Searcher, cfg Config) *DeepResear
 		config:    cfg,
 		sources:   make([]Source, 0),
 		seenURLs:  make(map[string]bool),
+	}
+}
+
+// emitProgress sends a progress event if a callback is configured
+func (a *DeepResearcher) emitProgress(event ProgressEvent) {
+	if a.config.OnProgress != nil {
+		a.config.OnProgress(event)
 	}
 }
 
@@ -860,13 +882,19 @@ Respond ONLY with valid JSON:
 	return plan, nil
 }
 
-// RunExhaustive executes exhaustive research mode
+// RunExhaustive executes exhaustive research mode (without context cancellation)
+func (a *DeepResearcher) RunExhaustive(topic string, plan ResearchPlan) (ResearchResult, error) {
+	return a.RunExhaustiveWithContext(context.Background(), topic, plan)
+}
+
+// RunExhaustiveWithContext executes exhaustive research mode with cancellation support
 // - Ignores LLM "final_answer" decision
 // - Uses pre-generated queries from plan
 // - Paginates through search results
 // - Deduplicates URLs
 // - Shows live progress
-func (a *DeepResearcher) RunExhaustive(topic string, plan ResearchPlan) (ResearchResult, error) {
+// - On cancellation: proceeds to write report with results collected so far
+func (a *DeepResearcher) RunExhaustiveWithContext(ctx context.Context, topic string, plan ResearchPlan) (ResearchResult, error) {
 	// Reset state
 	a.mu.Lock()
 	a.sources = make([]Source, 0)
@@ -876,6 +904,17 @@ func (a *DeepResearcher) RunExhaustive(topic string, plan ResearchPlan) (Researc
 	if len(plan.SearchQueries) == 0 {
 		return ResearchResult{}, fmt.Errorf("no search queries in plan - use CreatePlanExhaustive")
 	}
+
+	// Emit planning complete event
+	a.emitProgress(ProgressEvent{
+		Phase:       "searching",
+		Round:       0,
+		TotalRounds: a.config.MaxLoops,
+		URLsFound:   0,
+		TargetURLs:  a.config.MinResults,
+		Message:     fmt.Sprintf("Starting research with %d queries", len(plan.SearchQueries)),
+		Percent:     5,
+	})
 
 	fmt.Printf("\n🔥 Starting Exhaustive Research for: %s\n", topic)
 	pagesDesc := "auto (until empty)"
@@ -902,8 +941,18 @@ Knowledge gathered:
 	// Stats tracking
 	totalURLsFound := 0
 	totalDuplicates := 0
+	cancelled := false
 
 	for round := 0; round < a.config.MaxLoops && queryIndex < totalQueries; round++ {
+		// Check for cancellation at start of each round
+		select {
+		case <-ctx.Done():
+			fmt.Printf("\n⚠️ Research cancelled - proceeding to write report with %d results collected\n", len(a.sources))
+			cancelled = true
+			goto writeReport
+		default:
+		}
+
 		fmt.Printf("=== Round %d/%d ===\n", round+1, a.config.MaxLoops)
 
 		// Get queries for this round
@@ -914,12 +963,43 @@ Knowledge gathered:
 		roundQueries := plan.SearchQueries[queryIndex:endIndex]
 		queryIndex = endIndex
 
+		// Emit round start event
+		a.mu.Lock()
+		currentURLs := len(a.sources)
+		a.mu.Unlock()
+		
+		progressPercent := 5 + (round * 80 / a.config.MaxLoops) // 5-85% for search phase
+		a.emitProgress(ProgressEvent{
+			Phase:       "searching",
+			Round:       round + 1,
+			TotalRounds: a.config.MaxLoops,
+			URLsFound:   currentURLs,
+			TargetURLs:  a.config.MinResults,
+			Message:     fmt.Sprintf("Round %d/%d: Processing queries %d-%d of %d", round+1, a.config.MaxLoops, queryIndex-len(roundQueries)+1, queryIndex, totalQueries),
+			Percent:     progressPercent,
+		})
+
 		fmt.Printf("🔎 Processing queries %d-%d of %d\n", queryIndex-len(roundQueries)+1, queryIndex, totalQueries)
 
 		// Process queries with pagination
-		roundResults, newURLs, duplicates := a.searchWithPagination(roundQueries)
+		roundResults, newURLs, duplicates, searchErrors := a.searchWithPagination(roundQueries)
 		totalURLsFound += newURLs
 		totalDuplicates += duplicates
+
+		// Emit progress with any search errors
+		if len(searchErrors) > 0 {
+			a.emitProgress(ProgressEvent{
+				Phase:       "searching",
+				Round:       round + 1,
+				TotalRounds: a.config.MaxLoops,
+				URLsFound:   totalURLsFound,
+				TargetURLs:  a.config.MinResults,
+				Message:     fmt.Sprintf("Round %d completed with %d search errors", round+1, len(searchErrors)),
+				Percent:     progressPercent,
+				Errors:      searchErrors,
+				ErrorCount:  len(searchErrors),
+			})
+		}
 
 		if roundResults != "" {
 			researchContext += fmt.Sprintf("\n--- Round %d Results ---\n%s", round+1, roundResults)
@@ -929,6 +1009,16 @@ Knowledge gathered:
 		maxChars := a.config.maxContextChars()
 		compressionThreshold := int(float64(maxChars) * 0.5)
 		if len(researchContext) > compressionThreshold {
+			a.emitProgress(ProgressEvent{
+				Phase:       "compressing",
+				Round:       round + 1,
+				TotalRounds: a.config.MaxLoops,
+				URLsFound:   currentURLs,
+				TargetURLs:  a.config.MinResults,
+				Message:     "Compressing context to fit model limits...",
+				Percent:     progressPercent,
+			})
+			
 			fmt.Printf("📦 Context size (%d chars) exceeds threshold (%d), compressing...\n", 
 				len(researchContext), compressionThreshold)
 			compressed, err := a.compressContext(researchContext, 0.5)
@@ -955,15 +1045,41 @@ Knowledge gathered:
 		fmt.Printf(" (target: %d)\n\n", a.config.MinResults)
 	}
 
+writeReport:
 	// Final stats
 	a.mu.Lock()
 	finalCount := len(a.sources)
 	a.mu.Unlock()
 
-	fmt.Printf("\n📊 Final stats: %d unique URLs collected, %d duplicates skipped\n", finalCount, totalDuplicates)
+	if cancelled {
+		fmt.Printf("\n📊 Partial stats (cancelled): %d unique URLs collected, %d duplicates skipped\n", finalCount, totalDuplicates)
+	} else {
+		fmt.Printf("\n📊 Final stats: %d unique URLs collected, %d duplicates skipped\n", finalCount, totalDuplicates)
+	}
+
+	// Emit writing report event
+	reportMessage := "Writing final report..."
+	if cancelled {
+		reportMessage = "Writing partial report (search cancelled)..."
+	}
+	a.emitProgress(ProgressEvent{
+		Phase:       "writing_report",
+		Round:       a.config.MaxLoops,
+		TotalRounds: a.config.MaxLoops,
+		URLsFound:   finalCount,
+		TargetURLs:  a.config.MinResults,
+		Message:     reportMessage,
+		Percent:     90,
+	})
 
 	// Write report
-	fmt.Println("\n✍️ Writing Final Report...")
+	if cancelled {
+		fmt.Println("\n✍️ Writing Partial Report (search was cancelled)...")
+		// Add note to context about partial results
+		researchContext += "\n\n--- NOTE: Research was cancelled early. Results may be incomplete. ---\n"
+	} else {
+		fmt.Println("\n✍️ Writing Final Report...")
+	}
 	report, err := a.writeReport(topic, researchContext)
 	if err != nil {
 		return ResearchResult{}, err
@@ -974,14 +1090,26 @@ Knowledge gathered:
 	copy(sources, a.sources)
 	a.mu.Unlock()
 
+	// Emit complete event
+	a.emitProgress(ProgressEvent{
+		Phase:       "complete",
+		Round:       a.config.MaxLoops,
+		TotalRounds: a.config.MaxLoops,
+		URLsFound:   len(sources),
+		TargetURLs:  a.config.MinResults,
+		Message:     fmt.Sprintf("Research complete! Found %d unique results.", len(sources)),
+		Percent:     100,
+	})
+
 	return ResearchResult{Report: report, Sources: sources}, nil
 }
 
 // searchWithPagination searches queries across multiple pages with rate limiting
-func (a *DeepResearcher) searchWithPagination(queries []string) (string, int, int) {
+func (a *DeepResearcher) searchWithPagination(queries []string) (string, int, int, []string) {
 	var results strings.Builder
 	newURLs := 0
 	duplicates := 0
+	var searchErrors []string
 
 	// Check if searcher supports pagination
 	type paginatedSearcher interface {
@@ -1020,7 +1148,9 @@ func (a *DeepResearcher) searchWithPagination(queries []string) (string, int, in
 			}
 
 			if err != nil {
+				errMsg := fmt.Sprintf("Search '%s': %v", truncateQuery(query, 30), err)
 				fmt.Printf("   ❌ Error searching '%s' (page %d): %v\n", query, page, err)
+				searchErrors = append(searchErrors, errMsg)
 				break // Stop this query on error
 			}
 
@@ -1073,7 +1203,7 @@ func (a *DeepResearcher) searchWithPagination(queries []string) (string, int, in
 		}
 	}
 
-	return results.String(), newURLs, duplicates
+	return results.String(), newURLs, duplicates, searchErrors
 }
 
 // truncateQuery truncates a query for display

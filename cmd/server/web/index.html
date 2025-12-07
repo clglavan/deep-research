@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Research</title>
+    <style>
+        :root {
+            --bg: #1a1a2e;
+            --bg-secondary: #16213e;
+            --accent: #0f3460;
+            --accent-light: #e94560;
+            --text: #eaeaea;
+            --text-dim: #a0a0a0;
+            --success: #4ade80;
+            --warning: #fbbf24;
+            --error: #f87171;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        header p {
+            color: var(--text-dim);
+        }
+        
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .card h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: var(--accent-light);
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--accent);
+            border-radius: 8px;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+        
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-light);
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        @media (max-width: 600px) {
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: var(--bg);
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-light);
+        }
+        
+        .checkbox-group span {
+            font-size: 0.9rem;
+        }
+        
+        button {
+            padding: 0.875rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--accent-light);
+            color: white;
+            width: 100%;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(233, 69, 96, 0.4);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: var(--accent);
+            color: var(--text);
+        }
+        
+        /* Progress Section */
+        .progress-section {
+            display: none;
+        }
+        
+        .progress-section.active {
+            display: block;
+        }
+        
+        /* Search Error Log */
+        .error-log {
+            display: none;
+            margin-top: 1rem;
+        }
+        
+        .error-log.active {
+            display: block;
+        }
+        
+        .error-log-toggle {
+            background: rgba(248, 113, 113, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            width: 100%;
+            text-align: left;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .error-log-toggle:hover {
+            background: rgba(248, 113, 113, 0.2);
+        }
+        
+        .error-log-content {
+            display: none;
+            background: rgba(248, 113, 113, 0.05);
+            border: 1px solid rgba(248, 113, 113, 0.2);
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            padding: 0.75rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .error-log-content.expanded {
+            display: block;
+        }
+        
+        .error-log-item {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            padding: 0.25rem 0;
+            border-bottom: 1px solid rgba(248, 113, 113, 0.1);
+        }
+        
+        .error-log-item:last-child {
+            border-bottom: none;
+        }
+        
+        .progress-bar-container {
+            background: var(--bg);
+            border-radius: 999px;
+            height: 24px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-light), #ff6b6b);
+            border-radius: 999px;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            min-width: 40px;
+        }
+        
+        .status-message {
+            text-align: center;
+            padding: 1rem;
+            font-size: 1.1rem;
+        }
+        
+        .status-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-light);
+        }
+        
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+        
+        /* Results Section */
+        .results-section {
+            display: none;
+        }
+        
+        .results-section.active {
+            display: block;
+        }
+        
+        .report-content {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            max-height: 500px;
+            overflow-y: auto;
+            font-size: 0.95rem;
+            line-height: 1.8;
+        }
+        
+        .report-content h1,
+        .report-content h2,
+        .report-content h3 {
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--accent-light);
+        }
+        
+        .report-content h1:first-child {
+            margin-top: 0;
+        }
+        
+        .report-content a {
+            color: var(--accent-light);
+            text-decoration: none;
+        }
+        
+        .report-content a:hover {
+            text-decoration: underline;
+        }
+        
+        .report-content ul, .report-content ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .report-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        
+        .report-content th, .report-content td {
+            border: 1px solid var(--accent);
+            padding: 0.5rem;
+            text-align: left;
+        }
+        
+        .report-content th {
+            background: var(--accent);
+        }
+        
+        .report-content code {
+            background: var(--accent);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        
+        .report-content pre {
+            background: var(--accent);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        
+        .report-content pre code {
+            background: none;
+            padding: 0;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .action-buttons button {
+            flex: 1;
+        }
+        
+        /* Error state */
+        .error-message {
+            background: rgba(248, 113, 113, 0.1);
+            border: 1px solid var(--error);
+            border-radius: 8px;
+            padding: 1rem;
+            color: var(--error);
+            text-align: center;
+        }
+        
+        /* Phase indicator */
+        .phase-indicator {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+        
+        .phase-planning { background: var(--warning); color: #000; }
+        .phase-awaiting_approval { background: #8b5cf6; color: #fff; }
+        .phase-searching { background: var(--accent-light); color: #fff; }
+        .phase-compressing { background: #8b5cf6; color: #fff; }
+        .phase-writing_report { background: #06b6d4; color: #fff; }
+        .phase-cancelling { background: var(--warning); color: #000; }
+        .phase-complete { background: var(--success); color: #000; }
+        .phase-error { background: var(--error); color: #fff; }
+        
+        /* Plan Approval Section */
+        .plan-section {
+            display: none;
+        }
+        
+        .plan-section.active {
+            display: block;
+        }
+        
+        .plan-summary {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .plan-summary h3 {
+            color: var(--accent-light);
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .plan-summary p, .plan-summary ul {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+        
+        .plan-summary ul {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .queries-toggle {
+            background: var(--bg);
+            border: none;
+            color: var(--accent-light);
+            cursor: pointer;
+            padding: 0.75rem 1rem;
+            width: 100%;
+            text-align: left;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .queries-toggle:hover {
+            background: var(--accent);
+        }
+        
+        .queries-list {
+            display: none;
+            max-height: 300px;
+            overflow-y: auto;
+            background: var(--bg);
+            border-radius: 0 0 8px 8px;
+            padding: 1rem;
+            margin-top: -8px;
+            margin-bottom: 1rem;
+        }
+        
+        .queries-list.active {
+            display: block;
+        }
+        
+        .queries-list code {
+            display: block;
+            padding: 0.25rem 0;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            font-family: 'Monaco', 'Consolas', monospace;
+            border-bottom: 1px solid var(--accent);
+        }
+        
+        .queries-list code:last-child {
+            border-bottom: none;
+        }
+        
+        .revision-input {
+            margin-top: 1rem;
+        }
+        
+        .plan-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .plan-buttons button {
+            flex: 1;
+        }
+        
+        .btn-danger {
+            background: var(--error);
+            color: white;
+        }
+        
+        .btn-danger:hover:not(:disabled) {
+            background: #dc2626;
+        }
+        
+        .btn-warning {
+            background: var(--warning);
+            color: #000;
+        }
+        
+        .btn-warning:hover:not(:disabled) {
+            background: #f59e0b;
+        }
+        
+        /* Sources list */
+        .sources-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        
+        .sources-list a {
+            display: block;
+            color: var(--text-dim);
+            text-decoration: none;
+            padding: 0.25rem 0;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .sources-list a:hover {
+            color: var(--accent-light);
+        }
+        
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--text-dim);
+            border-radius: 50%;
+            border-top-color: var(--accent-light);
+            animation: spin 1s linear infinite;
+            vertical-align: middle;
+        }
+        
+        .spinner.large {
+            width: 50px;
+            height: 50px;
+            border-width: 4px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(26, 26, 46, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .loading-overlay .spinner {
+            width: 60px;
+            height: 60px;
+            border-width: 5px;
+        }
+        
+        .loading-text {
+            font-size: 1.2rem;
+            color: var(--text);
+            text-align: center;
+        }
+        
+        .loading-subtext {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            margin-top: 0.5rem;
+        }
+        
+        .loading-error {
+            background: rgba(248, 113, 113, 0.15);
+            border: 1px solid var(--error);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            max-width: 500px;
+            text-align: left;
+        }
+        
+        .loading-error-title {
+            color: var(--error);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .loading-error-message {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            word-break: break-word;
+        }
+        
+        .loading-actions {
+            margin-top: 1.5rem;
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .loading-actions button {
+            padding: 0.5rem 1.5rem;
+        }
+
+        /* Button with spinner */
+        .btn-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-loading .spinner {
+            width: 18px;
+            height: 18px;
+            border-width: 2px;
+            border-color: rgba(255,255,255,0.3);
+            border-top-color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="spinner" id="loadingSpinner"></div>
+        <div class="loading-text" id="loadingText">Creating research plan...</div>
+        <div class="loading-subtext" id="loadingSubtext">Please wait, do not refresh the page</div>
+        <div class="loading-error" id="loadingError" style="display: none;">
+            <div class="loading-error-title">⚠️ <span id="loadingErrorTitle">Error</span></div>
+            <div class="loading-error-message" id="loadingErrorMessage"></div>
+        </div>
+        <div class="loading-actions" id="loadingActions" style="display: none;">
+            <button class="btn-secondary" onclick="dismissLoadingError()">Dismiss</button>
+            <button class="btn-danger" onclick="cancelAndReturn()">Cancel Research</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <header>
+            <h1>🔬 Deep Research</h1>
+            <p>AI-powered comprehensive research with local LLM</p>
+        </header>
+        
+        <!-- Input Form -->
+        <div id="inputSection" class="card">
+            <h2>📝 Research Configuration</h2>
+            <form id="researchForm">
+                <div class="form-group">
+                    <label for="topic">Research Topic</label>
+                    <textarea id="topic" placeholder="Enter your research topic or question..." required></textarea>
+                </div>
+                
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label for="loops">Loops</label>
+                        <input type="number" id="loops" value="5" min="1" max="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="parallel">Parallel</label>
+                        <input type="number" id="parallel" value="5" min="1" max="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="contextLen">Context Length</label>
+                        <input type="number" id="contextLen" value="8192" min="1024" max="131072" step="1024">
+                    </div>
+                </div>
+                
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label for="minResults">Min Results</label>
+                        <input type="number" id="minResults" value="20" min="1" max="500">
+                    </div>
+                    <div class="form-group">
+                        <label for="delayMs">Delay (ms)</label>
+                        <input type="number" id="delayMs" value="500" min="0" max="5000" step="100">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="deepMode">
+                            <span>Deep Mode</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="grid-2" style="margin-bottom: 1.5rem;">
+                    <label class="checkbox-group">
+                        <input type="checkbox" id="resultLinks">
+                        <span>Emphasize Result Links</span>
+                    </label>
+                    <label class="checkbox-group">
+                        <input type="checkbox" id="simpleMode">
+                        <span>Simple Mode (faster)</span>
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn-primary" id="startBtn">
+                    🚀 Start Research
+                </button>
+            </form>
+        </div>
+        
+        <!-- Progress Section -->
+        <div id="progressSection" class="card progress-section">
+            <h2>⏳ Research Progress</h2>
+            <div class="status-message">
+                <span class="phase-indicator" id="phaseIndicator">Planning</span>
+                <div class="status-icon" id="statusIcon">🔍</div>
+                <div id="statusText">Initializing...</div>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar" style="width: 0%">0%</div>
+            </div>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" id="urlsFound">0</div>
+                    <div class="stat-label">URLs Found</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="currentRound">0</div>
+                    <div class="stat-label">Current Round</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="targetUrls">20</div>
+                    <div class="stat-label">Target URLs</div>
+                </div>
+            </div>
+            
+            <!-- Search Error Log -->
+            <div id="errorLog" class="error-log">
+                <button class="error-log-toggle" onclick="toggleErrorLog()">
+                    <span>⚠️ Search Errors (<span id="errorCount">0</span>)</span>
+                    <span id="errorLogToggleIcon">▼</span>
+                </button>
+                <div id="errorLogContent" class="error-log-content"></div>
+            </div>
+            
+            <div class="action-buttons" style="margin-top: 1.5rem;">
+                <button class="btn-danger" id="cancelBtn" onclick="cancelResearch()">⛔ Cancel & Generate Partial Report</button>
+            </div>
+        </div>
+        
+        <!-- Plan Approval Section -->
+        <div id="planSection" class="card plan-section">
+            <h2>📋 Research Plan</h2>
+            <div id="planContent">
+                <div class="plan-summary">
+                    <h3>🎯 Understanding</h3>
+                    <p id="planUnderstanding">Loading...</p>
+                </div>
+                <div class="plan-summary">
+                    <h3>📝 Research Steps</h3>
+                    <ul id="planSteps"></ul>
+                </div>
+                <div class="plan-summary">
+                    <h3>✨ Expected Outcome</h3>
+                    <p id="planOutcome">Loading...</p>
+                </div>
+                
+                <button class="queries-toggle" onclick="toggleQueries()">
+                    <span>🔍 Search Queries (<span id="queryCount">0</span>)</span>
+                    <span id="queryToggleIcon">▼</span>
+                </button>
+                <div class="queries-list" id="queriesList"></div>
+                
+                <div class="revision-input">
+                    <label for="revisionFeedback">💡 Suggest improvements (optional)</label>
+                    <textarea id="revisionFeedback" placeholder="e.g., Add more focus on pricing, Include competitor analysis, Search for recent news from 2024..."></textarea>
+                </div>
+            </div>
+            
+            <div class="plan-buttons">
+                <button class="btn-danger" onclick="cancelPlan()">❌ Cancel</button>
+                <button class="btn-warning" onclick="revisePlan()">🔄 Revise Plan</button>
+                <button class="btn-primary" onclick="approvePlan()">✅ Approve & Start</button>
+            </div>
+        </div>
+        
+        <!-- Results Section -->
+        <div id="resultsSection" class="card results-section">
+            <h2>📊 Research Results</h2>
+            <div class="report-content" id="reportContent">
+                <!-- Report will be rendered here -->
+            </div>
+            <div class="action-buttons">
+                <button class="btn-secondary" onclick="downloadReport()">📥 Download MD</button>
+                <button class="btn-secondary" onclick="downloadPDF()">📄 Download PDF</button>
+                <button class="btn-primary" onclick="newResearch()">🔄 New Research</button>
+            </div>
+        </div>
+        
+        <!-- Sources Section -->
+        <div id="sourcesSection" class="card results-section">
+            <h2>📚 Sources (<span id="sourcesCount">0</span>)</h2>
+            <div class="sources-list" id="sourcesList">
+                <!-- Sources will be listed here -->
+            </div>
+        </div>
+        
+        <!-- Error Section -->
+        <div id="errorSection" class="card" style="display: none;">
+            <div class="error-message" id="errorMessage"></div>
+            <div class="action-buttons" style="margin-top: 1rem;">
+                <button class="btn-primary" onclick="newResearch()">🔄 Try Again</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        let eventSource = null;
+        let currentReport = '';
+        let currentPlan = null;
+        
+        // Loading overlay helpers
+        function showLoading(message, subtext) {
+            document.getElementById('loadingText').textContent = message || 'Loading...';
+            document.getElementById('loadingSubtext').textContent = subtext || 'Please wait, do not refresh the page';
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('loadingError').style.display = 'none';
+            document.getElementById('loadingActions').style.display = 'none';
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+        
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+            // Reset error state
+            document.getElementById('loadingError').style.display = 'none';
+            document.getElementById('loadingActions').style.display = 'none';
+        }
+        
+        // Show error on loading screen (doesn't close the overlay)
+        function showLoadingError(title, message) {
+            document.getElementById('loadingErrorTitle').textContent = title || 'Error';
+            document.getElementById('loadingErrorMessage').textContent = message || 'An unknown error occurred';
+            document.getElementById('loadingError').style.display = 'block';
+            document.getElementById('loadingActions').style.display = 'flex';
+        }
+        
+        // Dismiss error but keep loading (for transient errors)
+        function dismissLoadingError() {
+            document.getElementById('loadingError').style.display = 'none';
+            document.getElementById('loadingActions').style.display = 'none';
+        }
+        
+        // Cancel research and return to form
+        async function cancelAndReturn() {
+            try {
+                await fetch('/api/cancel', { method: 'POST' });
+            } catch (err) {
+                // Ignore errors
+            }
+            hideLoading();
+            newResearch();
+        }
+        
+        // Form submission - now just creates plan for approval
+        document.getElementById('researchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Reset accumulated errors for new research
+            accumulatedErrors = [];
+            document.getElementById('errorLog').classList.remove('active');
+            document.getElementById('errorCount').textContent = '0';
+            document.getElementById('errorLogContent').innerHTML = '';
+            
+            const data = {
+                topic: document.getElementById('topic').value,
+                loops: parseInt(document.getElementById('loops').value),
+                parallel: parseInt(document.getElementById('parallel').value),
+                contextLen: parseInt(document.getElementById('contextLen').value),
+                minResults: parseInt(document.getElementById('minResults').value),
+                delayMs: parseInt(document.getElementById('delayMs').value),
+                deepMode: document.getElementById('deepMode').checked,
+                resultLinks: document.getElementById('resultLinks').checked,
+                simpleMode: document.getElementById('simpleMode').checked
+            };
+            
+            // Disable button and show loading overlay
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('startBtn').innerHTML = '<span class="spinner"></span> Creating Plan...';
+            document.getElementById('startBtn').classList.add('btn-loading');
+            showLoading('Creating research plan...', 'The LLM is analyzing your topic and generating search queries');
+            
+            try {
+                const response = await fetch('/api/research', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (!response.ok) {
+                    const error = await response.text();
+                    showLoadingError('Failed to create plan', error);
+                    return;
+                }
+                
+                const result = await response.json();
+                
+                // Check if plan is ready for approval
+                if (result.status === 'awaiting_approval' && result.plan) {
+                    hideLoading();
+                    showPlanApproval(result.plan, data.minResults);
+                } else if (result.status === 'error') {
+                    showLoadingError('Plan creation failed', result.error);
+                } else if (result.status === 'planning') {
+                    // Still planning, poll for completion
+                    document.getElementById('inputSection').style.display = 'none';
+                    document.getElementById('targetUrls').textContent = data.minResults;
+                    pollForPlan();
+                } else {
+                    // Running state
+                    hideLoading();
+                    document.getElementById('inputSection').style.display = 'none';
+                    document.getElementById('progressSection').classList.add('active');
+                    document.getElementById('targetUrls').textContent = data.minResults;
+                    startProgressStream();
+                }
+                
+            } catch (err) {
+                showLoadingError('Connection failed', 'Failed to start research: ' + err.message);
+            }
+        });
+        
+        // Show plan for approval
+        function showPlanApproval(plan, minResults) {
+            currentPlan = plan;
+            
+            // Hide other sections
+            document.getElementById('inputSection').style.display = 'none';
+            document.getElementById('progressSection').classList.remove('active');
+            document.getElementById('resultsSection').classList.remove('active');
+            document.getElementById('sourcesSection').classList.remove('active');
+            document.getElementById('errorSection').style.display = 'none';
+            
+            // Show plan section
+            document.getElementById('planSection').classList.add('active');
+            
+            // Populate plan details
+            document.getElementById('planUnderstanding').textContent = plan.understanding_summary || 'N/A';
+            document.getElementById('planOutcome').textContent = plan.expected_outcome || 'N/A';
+            
+            // Populate steps
+            const stepsList = document.getElementById('planSteps');
+            stepsList.innerHTML = '';
+            if (plan.research_steps && plan.research_steps.length > 0) {
+                plan.research_steps.forEach(step => {
+                    const li = document.createElement('li');
+                    li.textContent = step;
+                    stepsList.appendChild(li);
+                });
+            }
+            
+            // Populate queries
+            const queriesList = document.getElementById('queriesList');
+            queriesList.innerHTML = '';
+            const queries = plan.search_queries || [];
+            document.getElementById('queryCount').textContent = queries.length;
+            
+            queries.forEach(query => {
+                const code = document.createElement('code');
+                code.textContent = query;
+                queriesList.appendChild(code);
+            });
+            
+            // Store target for later
+            document.getElementById('targetUrls').textContent = minResults;
+        }
+        
+        // Toggle queries visibility
+        function toggleQueries() {
+            const list = document.getElementById('queriesList');
+            const icon = document.getElementById('queryToggleIcon');
+            
+            if (list.classList.contains('active')) {
+                list.classList.remove('active');
+                icon.textContent = '▼';
+            } else {
+                list.classList.add('active');
+                icon.textContent = '▲';
+            }
+        }
+        
+        // Toggle error log visibility
+        function toggleErrorLog() {
+            const content = document.getElementById('errorLogContent');
+            const icon = document.getElementById('errorLogToggleIcon');
+            
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                icon.textContent = '▼';
+            } else {
+                content.classList.add('expanded');
+                icon.textContent = '▲';
+            }
+        }
+        
+        // Accumulated search errors across all progress updates
+        let accumulatedErrors = [];
+        
+        // Approve plan and start research
+        async function approvePlan() {
+            try {
+                const response = await fetch('/api/approve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    const error = await response.text();
+                    showError(error);
+                    return;
+                }
+                
+                // Hide plan, show progress
+                document.getElementById('planSection').classList.remove('active');
+                document.getElementById('progressSection').classList.add('active');
+                document.getElementById('cancelBtn').disabled = false;
+                
+                // Start SSE for progress
+                startProgressStream();
+                
+            } catch (err) {
+                showError('Failed to approve plan: ' + err.message);
+            }
+        }
+        
+        // Revise plan with feedback
+        async function revisePlan() {
+            const feedback = document.getElementById('revisionFeedback').value.trim();
+            
+            if (!feedback) {
+                alert('Please enter some feedback for revision');
+                return;
+            }
+            
+            // Disable all plan buttons and show loading
+            const planButtons = document.querySelectorAll('.plan-buttons button');
+            planButtons.forEach(btn => btn.disabled = true);
+            document.getElementById('planContent').style.opacity = '0.5';
+            document.getElementById('planSection').classList.remove('active');
+            showLoading('Revising research plan...', 'Incorporating your feedback into a new plan');
+            
+            try {
+                const response = await fetch('/api/revise', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ feedback })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.text();
+                    showLoadingError('Revision failed', error);
+                    return;
+                }
+                
+                const result = await response.json();
+                
+                hideLoading();
+                planButtons.forEach(btn => btn.disabled = false);
+                document.getElementById('planContent').style.opacity = '1';
+                
+                if (result.status === 'awaiting_approval' && result.plan) {
+                    document.getElementById('revisionFeedback').value = '';
+                    showPlanApproval(result.plan, parseInt(document.getElementById('targetUrls').textContent));
+                } else if (result.status === 'error') {
+                    showLoadingError('Revision failed', result.error);
+                }
+                
+            } catch (err) {
+                showLoadingError('Connection failed', 'Failed to revise plan: ' + err.message);
+            }
+        }
+        
+        // Cancel plan (before approval)
+        async function cancelPlan() {
+            try {
+                await fetch('/api/cancel', { method: 'POST' });
+                newResearch();
+            } catch (err) {
+                newResearch();
+            }
+        }
+        
+        // Cancel running research
+        async function cancelResearch() {
+            document.getElementById('cancelBtn').disabled = true;
+            document.getElementById('cancelBtn').textContent = '⏳ Cancelling...';
+            
+            try {
+                await fetch('/api/cancel', { method: 'POST' });
+                // SSE will handle the state update
+            } catch (err) {
+                showError('Failed to cancel: ' + err.message);
+            }
+        }
+        
+        // SSE Progress Stream
+        function startProgressStream() {
+            if (eventSource) {
+                eventSource.close();
+            }
+            
+            eventSource = new EventSource('/api/progress');
+            
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                updateProgress(data);
+            };
+            
+            eventSource.onerror = () => {
+                eventSource.close();
+                // Check final status
+                checkStatus();
+            };
+        }
+        
+        // Update progress UI
+        function updateProgress(data) {
+            // Update phase indicator
+            const phaseEl = document.getElementById('phaseIndicator');
+            phaseEl.textContent = formatPhase(data.phase);
+            phaseEl.className = 'phase-indicator phase-' + data.phase;
+            
+            // Update status icon
+            const icons = {
+                'planning': '📋',
+                'awaiting_approval': '📝',
+                'searching': '🔍',
+                'compressing': '📦',
+                'writing_report': '✍️',
+                'cancelling': '⏳',
+                'complete': '✅',
+                'error': '❌'
+            };
+            document.getElementById('statusIcon').textContent = icons[data.phase] || '⏳';
+            
+            // Update status text
+            document.getElementById('statusText').textContent = data.message || 'Processing...';
+            
+            // Update progress bar
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = data.percent + '%';
+            progressBar.textContent = data.percent + '%';
+            
+            // Update stats
+            document.getElementById('urlsFound').textContent = data.urlsFound || 0;
+            document.getElementById('currentRound').textContent = 
+                data.round ? `${data.round}/${data.totalRounds}` : '0';
+            
+            // Handle search errors
+            if (data.errors && data.errors.length > 0) {
+                // Add new errors to accumulated list
+                data.errors.forEach(err => {
+                    if (!accumulatedErrors.includes(err)) {
+                        accumulatedErrors.push(err);
+                    }
+                });
+                
+                // Show error log
+                const errorLog = document.getElementById('errorLog');
+                errorLog.classList.add('active');
+                
+                // Update error count
+                document.getElementById('errorCount').textContent = accumulatedErrors.length;
+                
+                // Update error content
+                const errorContent = document.getElementById('errorLogContent');
+                errorContent.innerHTML = accumulatedErrors.map(err => 
+                    `<div class="error-log-item">⚠️ ${escapeHtml(err)}</div>`
+                ).join('');
+            }
+            
+            // Handle completion
+            if (data.phase === 'complete') {
+                fetchResults();
+            } else if (data.phase === 'error') {
+                showError(data.message);
+            }
+        }
+        
+        // Escape HTML for safe display
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Format phase name
+        function formatPhase(phase) {
+            const names = {
+                'planning': 'Planning',
+                'awaiting_approval': 'Awaiting Approval',
+                'searching': 'Searching',
+                'compressing': 'Compressing',
+                'writing_report': 'Writing Report',
+                'cancelling': 'Cancelling',
+                'complete': 'Complete',
+                'error': 'Error'
+            };
+            return names[phase] || phase;
+        }
+        
+        // Check status
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                if (data.status === 'complete') {
+                    fetchResults();
+                } else if (data.status === 'error') {
+                    showError(data.error);
+                } else if (data.status === 'awaiting_approval' && data.plan) {
+                    showPlanApproval(data.plan, parseInt(document.getElementById('targetUrls').textContent) || 20);
+                }
+            } catch (err) {
+                console.error('Status check failed:', err);
+            }
+        }
+        
+        // Fetch and display results
+        async function fetchResults() {
+            try {
+                const response = await fetch('/api/results');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch results');
+                }
+                
+                const data = await response.json();
+                currentReport = data.Report;
+                
+                // Render markdown
+                document.getElementById('reportContent').innerHTML = marked.parse(data.Report);
+                
+                // Render sources
+                const sourcesList = document.getElementById('sourcesList');
+                sourcesList.innerHTML = '';
+                document.getElementById('sourcesCount').textContent = data.Sources.length;
+                
+                data.Sources.forEach(source => {
+                    const a = document.createElement('a');
+                    a.href = source.URL;
+                    a.target = '_blank';
+                    a.textContent = source.Title || source.URL;
+                    sourcesList.appendChild(a);
+                });
+                
+                // Show results
+                document.getElementById('progressSection').classList.remove('active');
+                document.getElementById('planSection').classList.remove('active');
+                document.getElementById('resultsSection').classList.add('active');
+                document.getElementById('sourcesSection').classList.add('active');
+                
+            } catch (err) {
+                showError('Failed to load results: ' + err.message);
+            }
+        }
+        
+        // Show error
+        function showError(message) {
+            hideLoading();
+            document.getElementById('progressSection').classList.remove('active');
+            document.getElementById('planSection').classList.remove('active');
+            document.getElementById('resultsSection').classList.remove('active');
+            document.getElementById('sourcesSection').classList.remove('active');
+            document.getElementById('errorSection').style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('startBtn').textContent = '🚀 Start Research';
+            document.getElementById('startBtn').classList.remove('btn-loading');
+            // Re-enable plan buttons if they were disabled
+            document.querySelectorAll('.plan-buttons button').forEach(btn => btn.disabled = false);
+        }
+        
+        // Download report as Markdown
+        function downloadReport() {
+            const blob = new Blob([currentReport], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'research-report.md';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // Download report as PDF
+        function downloadPDF() {
+            const element = document.getElementById('reportContent');
+            const opt = {
+                margin: [10, 10, 10, 10],
+                filename: 'research-report.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+            
+            // Temporarily adjust styles for PDF
+            const originalBg = element.style.background;
+            const originalColor = element.style.color;
+            element.style.background = 'white';
+            element.style.color = 'black';
+            
+            // Style all links for PDF
+            const links = element.querySelectorAll('a');
+            links.forEach(a => {
+                a.style.color = '#0066cc';
+            });
+            
+            html2pdf().set(opt).from(element).save().then(() => {
+                // Restore styles
+                element.style.background = originalBg;
+                element.style.color = originalColor;
+                links.forEach(a => {
+                    a.style.color = '';
+                });
+            });
+        }
+        
+        // New research
+        function newResearch() {
+            if (eventSource) {
+                eventSource.close();
+            }
+            
+            currentPlan = null;
+            hideLoading();
+            
+            // Reset accumulated errors
+            accumulatedErrors = [];
+            document.getElementById('errorLog').classList.remove('active');
+            document.getElementById('errorCount').textContent = '0';
+            document.getElementById('errorLogContent').innerHTML = '';
+            
+            document.getElementById('inputSection').style.display = 'block';
+            document.getElementById('progressSection').classList.remove('active');
+            document.getElementById('planSection').classList.remove('active');
+            document.getElementById('resultsSection').classList.remove('active');
+            document.getElementById('sourcesSection').classList.remove('active');
+            document.getElementById('errorSection').style.display = 'none';
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('startBtn').textContent = '🚀 Start Research';
+            document.getElementById('startBtn').classList.remove('btn-loading');
+            document.getElementById('cancelBtn').disabled = false;
+            document.getElementById('cancelBtn').textContent = '⛔ Cancel & Generate Partial Report';
+            
+            // Re-enable plan buttons
+            document.querySelectorAll('.plan-buttons button').forEach(btn => btn.disabled = false);
+            
+            // Reset progress
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('progressBar').textContent = '0%';
+            document.getElementById('urlsFound').textContent = '0';
+            document.getElementById('currentRound').textContent = '0';
+            document.getElementById('revisionFeedback').value = '';
+        }
+        
+        // Restore form values from config
+        function restoreFormValues(config) {
+            if (!config) return;
+            if (config.topic) document.getElementById('topic').value = config.topic;
+            if (config.loops) document.getElementById('loops').value = config.loops;
+            if (config.parallel) document.getElementById('parallel').value = config.parallel;
+            if (config.contextLen) document.getElementById('contextLen').value = config.contextLen;
+            if (config.minResults) document.getElementById('minResults').value = config.minResults;
+            if (config.delayMs) document.getElementById('delayMs').value = config.delayMs;
+            document.getElementById('deepMode').checked = config.deepMode || false;
+            document.getElementById('resultLinks').checked = config.resultLinks || false;
+            document.getElementById('simpleMode').checked = config.simpleMode || false;
+        }
+        
+        // Poll for plan completion (used when page loads during planning)
+        async function pollForPlan() {
+            const poll = async () => {
+                try {
+                    const response = await fetch('/api/status');
+                    const job = await response.json();
+                    
+                    if (job.status === 'awaiting_approval' && job.plan) {
+                        hideLoading();
+                        if (job.config) restoreFormValues(job.config);
+                        showPlanApproval(job.plan, job.config?.minResults || 20);
+                    } else if (job.status === 'error') {
+                        showLoadingError('Plan creation failed', job.error || 'An unknown error occurred');
+                    } else if (job.status === 'planning') {
+                        setTimeout(poll, 1000); // Poll every second
+                    } else if (job.status === 'running') {
+                        hideLoading();
+                        document.getElementById('progressSection').classList.add('active');
+                        if (job.progress) updateProgress(job.progress);
+                        startProgressStream();
+                    }
+                } catch (err) {
+                    console.error('Poll failed:', err);
+                    showLoadingError('Connection error', 'Failed to check status: ' + err.message);
+                }
+            };
+            poll();
+        }
+        
+        // Initialize UI state from server on page load
+        async function initializeFromServer() {
+            try {
+                const response = await fetch('/api/status');
+                const job = await response.json();
+                
+                switch (job.status) {
+                    case 'idle':
+                        // Default state - show input form (already visible)
+                        break;
+                        
+                    case 'planning':
+                        // Show loading and poll for plan
+                        document.getElementById('inputSection').style.display = 'none';
+                        if (job.config) {
+                            restoreFormValues(job.config);
+                            document.getElementById('targetUrls').textContent = job.config.minResults || 20;
+                        }
+                        showLoading('Creating research plan...', 'The LLM is analyzing your topic and generating search queries');
+                        pollForPlan();
+                        break;
+                        
+                    case 'awaiting_approval':
+                        // Show plan approval screen
+                        if (job.config) restoreFormValues(job.config);
+                        if (job.plan) {
+                            showPlanApproval(job.plan, job.config?.minResults || 20);
+                        }
+                        break;
+                        
+                    case 'running':
+                    case 'cancelled':
+                        // Show progress screen and connect SSE
+                        if (job.config) {
+                            restoreFormValues(job.config);
+                            document.getElementById('targetUrls').textContent = job.config.minResults || 20;
+                        }
+                        document.getElementById('inputSection').style.display = 'none';
+                        document.getElementById('progressSection').classList.add('active');
+                        if (job.progress) updateProgress(job.progress);
+                        startProgressStream();
+                        break;
+                        
+                    case 'complete':
+                        // Show results
+                        if (job.config) restoreFormValues(job.config);
+                        document.getElementById('inputSection').style.display = 'none';
+                        fetchResults();
+                        break;
+                        
+                    case 'error':
+                        // Show error but also show the input form so user can start fresh
+                        if (job.config) restoreFormValues(job.config);
+                        // Keep input section visible, just show error section
+                        document.getElementById('errorSection').style.display = 'block';
+                        document.getElementById('errorMessage').textContent = job.error || 'An unknown error occurred';
+                        break;
+                }
+            } catch (err) {
+                console.error('Failed to restore state from server:', err);
+                // Fall back to default state (input form) - already visible
+            }
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initializeFromServer);
+    </script>
+</body>
+</html>

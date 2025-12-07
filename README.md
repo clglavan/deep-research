@@ -301,3 +301,69 @@ If you see these messages, your context is too small for the research scope:
 | Large (64K+) | Holds 500+ results with minimal compression. Ideal for comprehensive deep research. |
 
 **Bottom line:** For serious research, use a model with at least 16K context. The `qwen/qwen3-4b-thinking-2507` model with 8K context works well for moderate research with the compression system, but larger models will produce more detailed reports.
+
+## Web UI
+
+For a graphical interface, use the web server:
+
+### Building the Web Server
+
+```bash
+go build -o deep-research-server ./cmd/server/main.go
+```
+
+### Running the Web Server
+
+```bash
+./deep-research-server
+```
+
+**With custom settings:**
+```bash
+./deep-research-server --port 3000 --lm-url "http://localhost:1234/v1" --searxng-url "http://localhost:8080"
+```
+
+### Web Server Options
+
+| Flag/Env | Default | Description |
+|----------|---------|-------------|
+| `--port` / `PORT` | `8081` | Web UI port |
+| `--lm-url` / `LM_URL` | Auto-detect | LM Studio API endpoint |
+| `--searxng-url` / `SEARX_URL` | `http://localhost:8080` | SearXNG instance URL |
+
+### Features
+
+- **Plan Review & Approval**: Review the research plan before execution, see all search queries, and provide feedback to revise the plan
+- **Real-time Progress**: Watch research progress with live updates via Server-Sent Events
+- **Search Error Visibility**: See any search errors in real-time (e.g., if SearXNG is down)
+- **Cancel & Partial Reports**: Cancel ongoing research and still get a report based on data collected so far
+- **All Configuration Options**: Adjust loops, parallel, context length, deep mode, etc.
+- **Results Preview**: View the generated Markdown report with proper formatting
+- **Export Options**: Download results as Markdown or PDF (client-side generation)
+- **State Persistence**: Refresh the page without losing your research progress
+- **Single-page Interface**: No dependencies, just open the URL in your browser
+
+### Screenshots
+
+Once running, open `http://localhost:8081` (or your custom port) in any browser:
+
+#### Input Form
+Configure your research topic and settings:
+
+![Input Form](imgs/image.png)
+
+#### Plan Approval
+Review the research plan, see expanded search queries, and approve or revise:
+
+![Plan Approval](imgs/image2.png)
+
+#### Research Progress
+Watch the research execute in real-time with progress tracking and error visibility:
+
+![Research Progress](imgs/image3.png)
+
+#### Results
+View the final report with Markdown rendering and export options:
+
+![Results](imgs/image4.png)
+
